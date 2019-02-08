@@ -86,7 +86,7 @@ class Source_Snap {
 			return;
 		}
 
-		// On to trying to make DomPDF comply...
+		// On to trying to make Dompdf comply...
 
 		// Windows and (older) Mac to Linux newline conversion.
 		$str = str_replace( "\r\n", "\n", $str );
