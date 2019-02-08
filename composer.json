@@ -1,0 +1,12 @@
+{
+    "require": {
+        "dompdf/dompdf": "^0.8.3",
+        "scrivo/highlight.php": "v9.13.1.1",
+        "tinify/tinify": "^1.5"
+    },
+    "autoload": {
+        "classmap": [
+            "includes"
+        ]
+    }
+}
