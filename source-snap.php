@@ -256,9 +256,9 @@ class Source_Snap {
 	 *
 	 * @link https://stackoverflow.com/questions/4133859/round-up-to-nearest-multiple-of-five-in-php
 	 *
-	 * @param int $n Number to be rounded (up).
-	 * @param int $x 'Base number' to be used.
-	 * @param int    Resulting rounded number.
+	 * @param  int $n Number to be rounded (up).
+	 * @param  int $x 'Base number' to be used.
+	 * @return int    Resulting rounded number.
 	 */
 	private function round_up_to_any( $n, $x = 5 ) {
 		return ( 0 === ceil( $n ) % $x  ? ceil( $n ) : round( ( $n + $x/2 )/$x ) * $x );
