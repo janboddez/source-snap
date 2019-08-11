@@ -252,7 +252,7 @@ class Source_Snap {
 	}
 
 	/**
-	 * Rounds up to multiples of a given number
+	 * Rounds any number up to multiples of a second number.
 	 *
 	 * @link https://stackoverflow.com/questions/4133859/round-up-to-nearest-multiple-of-five-in-php
 	 *
