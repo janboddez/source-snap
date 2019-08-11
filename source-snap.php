@@ -3,7 +3,7 @@
  * Plugin Name: Source Snap
  * Description: Automatically generate Featured Images from source code snippets.
  * Author: Jan Boddez
- * Author URI: https://janboddez.tech/
+ * Author URI: https://janboddez.be/
  * License: GNU General Public License v3
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  * Version: 0.1
@@ -11,12 +11,6 @@
 
 namespace Source_Snap;
 
-// Prevent direct access.
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
-
-// Load Composer's autoloader.
 require __DIR__ . '/vendor/autoload.php';
 
 use Dompdf\Dompdf;
@@ -36,7 +30,7 @@ class Source_Snap {
 		$this->options_handler = new Options_Handler();
 
 		// Register callback functions.
-		add_action('publish_post', array( $this, 'create_thumbnail'), 10, 2);
+		add_action('publish_post', array( $this, 'createThumbnail'), 10, 2);
 	}
 
 	/**
@@ -48,7 +42,7 @@ class Source_Snap {
 	 * @param int $post_id Post ID.
 	 * @param WP_POST $post Corresponding post object.
 	 */
-	public function create_thumbnail( $post_id, $post ) {
+	public function createThumbnail( $post_id, $post ) {
 		if ( ! class_exists( 'Imagick' ) ) {
 			return;
 		}
@@ -59,7 +53,7 @@ class Source_Snap {
 		// File path, without extension.
 		$filename = trailingslashit( $wp_upload_dir['path'] ) . $post->post_name;
 
-		if ( is_file( $filename . '-min.png' ) || is_file( $filename . '.png' ) ) {
+		if ( is_file( $filename . '-min.png' ) ) {
 			// File exists. Bail.
 			return;
 		}
@@ -85,8 +79,6 @@ class Source_Snap {
 			// Something went wrong.
 			return;
 		}
-
-		// On to trying to make Dompdf comply...
 
 		// Windows and (older) Mac to Linux newline conversion.
 		$str = str_replace( "\r\n", "\n", $str );
@@ -127,11 +119,11 @@ class Source_Snap {
 		// Render at double the resolution. Leads to way better kerning.
 		$im->setResolution( 144, 144 );
 
-		// Rasterize first page and convert to PNG.
+		// Rasterize only the first page, and convert to PNG.
 		$im->readimage( $filename . '.pdf[0]' );
 		$im->setImageFormat( 'png' );
 
-		$width = $im->getImageWidth();
+		$width  = $im->getImageWidth();
 		$height = $im->getImageHeight();
 
 		// Resize down and sharpen a bit. (Why the minus 1 pixel? A: Somewhat
@@ -143,27 +135,31 @@ class Source_Snap {
 		$im->trimImage( 0.3 );
 		$im->setImagePage( 0, 0, 0, 0 );
 
-		// Get updated height.
-		$height = $im->getImageHeight();
+		// Get updated height, plus some bottom padding.
+		$height = $im->getImageHeight() + 5;
 
-		if ( $height > 544 ) {
+		if ( $height > 560 ) {
 			// Ensure the final composited image isn't taller than 800px.
-			$height = 544;
-		} elseif ( $height < 144 ) {
+			$height = 560;
+		} elseif ( $height < 160 ) {
 			// Or shorter than 400px.
-			$height = 144;
+			$height = 160;
 		}
+
+		// Round up to a multiple of 80. (`$width` is _always_ equal to 1600).
+		$height = $this->round_up_to_any( $height, 80 );
 
 		// Load our mockup image and place the rendered text on top.
 		$background = new \Imagick();
 		$background->readImage( dirname( __FILE__ ) . '/assets/images/background.png' );
 
-		$background->compositeImage( $im, \Imagick::COMPOSITE_DEFAULT, 82, 149 );
+		//$background->compositeImage( $im, \Imagick::COMPOSITE_DEFAULT, 82, 149 );
+		$background->compositeImage( $im, \Imagick::COMPOSITE_DEFAULT, 82, 159 );
 		$im->clear();
 		$im->destroy();
 
 		// Crop to final size.
-		$background->cropImage( 1800, $height + 256, 0, 0 );
+		$background->cropImage( 1800, $height + 240, 0, 0 );
 		$background->setImagePage( 0, 0, 0, 0 );
 
 		// 'Fade out' any overflow on the right and bottom sides by compositing
@@ -182,7 +178,7 @@ class Source_Snap {
 		$bottom->readImage( dirname( __FILE__ ) . '/assets/images/bottom.png');
 
 		// Lay the bottom image on top of what we've got so far.
-		$background->compositeImage( $bottom, \Imagick::COMPOSITE_DEFAULT, 0, $height + 256 - 100 );
+		$background->compositeImage( $bottom, \Imagick::COMPOSITE_DEFAULT, 0, $height + 140 ); // 240, or 3 x 80, minus 100.
 
 		// Destroy image buffer.
 		$bottom->clear();
@@ -198,12 +194,16 @@ class Source_Snap {
 			echo $background;
 			$imageBuffer = ob_get_clean();
 
-			// Send the image data off to TinyPNG.
-			\Tinify\setKey( $options['tinify_api_key'] );
-			$resultData = \Tinify\fromBuffer( $imageBuffer )->toBuffer();
-
-			// Save the compressed image to disk.
-			file_put_contents( $filename . '-min.png', $resultData );
+			try {
+				// Send the image data off to TinyPNG.
+				\Tinify\setKey( $options['tinify_api_key'] );
+				$resultData = \Tinify\fromBuffer( $imageBuffer )->toBuffer();
+				// Save the compressed image to disk.
+				file_put_contents( $filename . '-min.png', $resultData );
+			} catch ( \Exception $e ) {
+				// Something went wrong.
+				error_log( $e->getMessage() );
+			}
 		} else {
 			// Save the 'original' image to disk.
 			$background->writeImage( $filename . '.png' );
@@ -229,11 +229,11 @@ class Source_Snap {
 
 		// Now import the image into WordPress' media library.
 		$attachment = array(
-			'guid' => $wp_upload_dir['url'] . '/' . basename( $filename ),
+			'guid'           => $wp_upload_dir['url'] . '/' . basename( $filename ),
 			'post_mime_type' => 'image/png',
-			'post_title' => basename( $filename ),
-			'post_content' => '',
-			'post_status' => 'inherit',
+			'post_title'     => $post->post_title,
+			'post_content'   => '',
+			'post_status'    => 'inherit',
 		);
 
 		$attachment_id = wp_insert_attachment( $attachment, $filename, $post_id );
@@ -249,6 +249,19 @@ class Source_Snap {
 
 		// Set as Featured Iamge.
 		set_post_thumbnail( $post_id, $attachment_id );
+	}
+
+	/**
+	 * Rounds up to multiples of a given number
+	 *
+	 * @link https://stackoverflow.com/questions/4133859/round-up-to-nearest-multiple-of-five-in-php
+	 *
+	 * @param int $n Number to be rounded (up).
+	 * @param int $x 'Base number' to be used.
+	 * @param int    Resulting rounded number.
+	 */
+	private function round_up_to_any( $n, $x = 5 ) {
+		return ( 0 === ceil( $n ) % $x  ? ceil( $n ) : round( ( $n + $x/2 )/$x ) * $x );
 	}
 }
 
