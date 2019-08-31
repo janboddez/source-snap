@@ -13,6 +13,11 @@
 
 namespace Source_Snap;
 
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 require __DIR__ . '/vendor/autoload.php';
 
 use Dompdf\Dompdf;
@@ -37,7 +42,77 @@ class Source_Snap {
 		$this->options_handler = new Options_Handler();
 
 		// Register callback functions.
-		add_action( 'publish_post', array( $this, 'create_thumbnail' ), 10, 2 );
+		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
+		add_action( 'save_post', array( $this, 'update_meta' ), 10, 2 );
+		add_action( 'publish_post', array( $this, 'create_thumbnail' ), 99, 2 );
+	}
+
+	/**
+	 * Registers a new meta box.
+	 *
+	 * @since 0.1.0
+	 */
+	public function add_meta_box() {
+		add_meta_box(
+			'source-snap',
+			__( 'Source Snap', 'source-snap' ),
+			array( $this, 'render_meta_box' ),
+			array( 'post' ),
+			'advanced',
+			'default'
+		);
+	}
+
+	/**
+	 * Renders custom fields meta boxes on the custom post type edit page.
+	 *
+	 * @since 0.1.0
+	 * @param WP_Post $post Post being edited.
+	 */
+	public function render_meta_box( $post ) {
+		?>
+			<?php wp_nonce_field( basename( __FILE__ ), 'source_snap_nonce' ); ?>
+			<table style="width: 100%;">
+				<tr valign="top">
+					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_lang" style="margin-right: 1em;"><?php esc_html_e( 'Language', 'source-snap' ); ?></label></th>
+					<td><input type="text" name="source_snap_lang" id="source_snap_lang" value="<?php echo esc_attr( get_post_meta( $post->ID, '_source_snap_lang', true ) ); ?>" class="widefat" /></td>
+				</tr>
+				<tr valign="top">
+					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_code" style="margin-right: 1em;"><?php esc_html_e( 'Code Snippet', 'source-snap' ); ?></label></th>
+					<td><textarea name="source_snap_code" id="source_snap_code" rows="8" class="widefat" style="font: 13px/1.5 Consolas, Monaco, monospace;"><?php echo esc_html( get_post_meta( $post->ID, '_source_snap_code', true ) ); ?></textarea></td>
+				</tr>
+			</table>
+		<?php
+	}
+
+	/**
+	 * Handles metadata.
+	 *
+	 * @since 0.1.0
+	 * @param int     $post_id Post ID.
+	 * @param WP_Post $post    Corresponding post object.
+	 */
+	public function update_meta( $post_id, $post ) {
+		if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['source_snap_nonce'] ) || ! wp_verify_nonce( sanitize_key( $_POST['source_snap_nonce'] ), basename( __FILE__ ) ) ) {
+			// Nonce missing or invalid.
+			return;
+		}
+
+		if ( ! empty( $_POST['source_snap_lang'] ) ) {
+			update_post_meta( $post->ID, '_source_snap_lang', sanitize_text_field( wp_unslash( $_POST['source_snap_lang'] ) ) );
+		}
+
+		if ( ! empty( $_POST['source_snap_code'] ) ) {
+			update_post_meta( $post->ID, '_source_snap_code', sanitize_textarea_field( wp_unslash( $_POST['source_snap_code'] ) ) );
+		}
 	}
 
 	/**
@@ -49,7 +124,6 @@ class Source_Snap {
 	 *
 	 * @param int     $post_id Post ID.
 	 * @param WP_POST $post    Corresponding post object.
-	 * @return void
 	 */
 	public function create_thumbnail( $post_id, $post ) {
 		// We currently have a hard requirement for Imagick.
@@ -71,33 +145,33 @@ class Source_Snap {
 		}
 
 		// Fetch the code snippet and language, if present, to be used.
-		$str  = get_post_meta( $post_id, 'source_snap_snippet', true );
-		$lang = get_post_meta( $post_id, 'source_snap_lang', true );
+		$code = get_post_meta( $post_id, '_source_snap_code', true );
+		$lang = get_post_meta( $post_id, '_source_snap_lang', true );
 
-		if ( empty( $str ) ) {
+		if ( empty( $code ) ) {
 			// Nothing to do.
 			return;
 		}
 
 		// Handle possibly pre-encoded strings.
-		$str = html_entity_decode( $str, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$code = html_entity_decode( $code, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
 		try {
 			$hl = new Highlighter();
 
 			// Highlight that code. This'll add `span` tags that can be styled
 			// with CSS, and encode HTML entities.
-			if ( in_array( $lang, array( 'php', 'javascript', 'css', 'bash', 'html', 'apache', 'yaml', 'nginx' ), true ) ) {
-				// A supported language was explicitly specified.
-				$highlighted = $hl->highlight( $lang, $str );
+			if ( ! empty( $lang ) ) {
+				// Try the specified language.
+				$highlighted = $hl->highlight( $lang, $code );
 			} else {
 				// Give autodetect a try.
 				$hl->setAutodetectLanguages( array( 'php', 'javascript', 'css', 'bash', 'html', 'apache', 'yaml', 'nginx' ) );
-				$highlighted = $hl->highlightAuto( $str );
+				$highlighted = $hl->highlightAuto( $code );
 			}
 
 			// Wrap the highlighted code in `pre` tags.
-			$str = '<pre class="hljs ' . $highlighted->language . '">' . $highlighted->value . '</pre>';
+			$code = '<pre class="hljs ' . $highlighted->language . '">' . $highlighted->value . '</pre>';
 		} catch ( \Exception $e ) {
 			// Something went wrong. Bail.
 			error_log( $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
@@ -105,16 +179,16 @@ class Source_Snap {
 		}
 
 		// Windows and (older) Mac to Linux newline conversion.
-		$str = str_replace( "\r\n", "\n", $str );
-		$str = str_replace( "\r", "\n", $str );
+		$code = str_replace( "\r\n", "\n", $code );
+		$code = str_replace( "\r", "\n", $code );
 
 		// Adding a non-breaking space to empty lines forces Dompdf to have them
 		// occupy the same height (!) as non-empty lines.
-		$str = str_replace( "\n\n", '<br>&nbsp;<br>', $str );
+		$code = str_replace( "\n\n", '<br>&nbsp;<br>', $code );
 
 		// Force line breaks in order to prevent, well, more random Dompdf
 		// behavior.
-		$str = str_replace( "\n", '<br>', $str );
+		$code = str_replace( "\n", '<br>', $code );
 
 		// Start output buffering.
 		ob_start();
