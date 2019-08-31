@@ -1,5 +1,5 @@
 # Source Snap
-Automatically create colorful 'code snippet' Featured Images.
+Automatically add colorful 'code snippet' Featured Images to WordPress posts.
 
 ## Installation
 Make sure Imagick's enabled and able to read PDF files. Unpack in `wp-content/plugins`. Run `composer install`. Optionally, add your TinyPNG API account's details.
