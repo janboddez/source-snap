@@ -139,8 +139,14 @@ class Source_Snap {
 		// post slug and thus unique.
 		$filename = trailingslashit( $wp_upload_dir['path'] ) . $post->post_name;
 
+		if ( has_post_thumbnail( $post_id ) ) {
+			// Post already has a Featured Image. Bail.
+			return;
+		}
+
 		if ( is_file( $filename . '-min.png' ) || is_file( $filename . '.png' ) ) {
-			// File already exists. Nothing to do.
+			// File already exists. Leave it to the post author to set it as the
+			// post's Featured Image.
 			return;
 		}
 
