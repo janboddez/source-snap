@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1a52822bb99e32fcd7044b9f9d701285",
+    "content-hash": "e5c3e099aa971a2edf2152fdb282c7c5",
     "packages": [
         {
             "name": "dompdf/dompdf",
@@ -195,31 +195,39 @@
         },
         {
             "name": "scrivo/highlight.php",
-            "version": "v9.13.1.1",
+            "version": "v9.15.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/scrivo/highlight.php.git",
-                "reference": "93834559fa181b6f34a3f639eaab5f9a9856ec99"
+                "reference": "9ad3adb4456dc91196327498dbbce6aa1ba1239e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/scrivo/highlight.php/zipball/93834559fa181b6f34a3f639eaab5f9a9856ec99",
-                "reference": "93834559fa181b6f34a3f639eaab5f9a9856ec99",
+                "url": "https://api.github.com/repos/scrivo/highlight.php/zipball/9ad3adb4456dc91196327498dbbce6aa1ba1239e",
+                "reference": "9ad3adb4456dc91196327498dbbce6aa1ba1239e",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "ext-mbstring": "*"
+                "ext-mbstring": "*",
+                "php": ">=5.4"
             },
             "require-dev": {
                 "phpunit/phpunit": "^4.8|^5.7",
                 "symfony/finder": "^2.8"
             },
+            "suggest": {
+                "ext-dom": "Needed to make use of the features in the utilities namespace"
+            },
             "type": "library",
             "autoload": {
                 "psr-0": {
-                    "Highlight\\": ""
-                }
+                    "Highlight\\": "",
+                    "HighlightUtilities\\": ""
+                },
+                "files": [
+                    "HighlightUtilities/functions.php"
+                ]
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -228,18 +236,18 @@
             "authors": [
                 {
                     "name": "Geert Bergman",
-                    "homepage": "http://www.scrivo.org/",
-                    "role": "Project Author"
+                    "role": "Project Author",
+                    "homepage": "http://www.scrivo.org/"
                 },
                 {
                     "name": "Vladimir Jimenez",
-                    "homepage": "https://allejo.io",
-                    "role": "Contributor"
+                    "role": "Contributor",
+                    "homepage": "https://allejo.io"
                 },
                 {
                     "name": "Martin Folkers",
-                    "homepage": "https://twobrain.io",
-                    "role": "Contributor"
+                    "role": "Contributor",
+                    "homepage": "https://twobrain.io"
                 }
             ],
             "description": "Server side syntax highlighter that supports 185 languages. It's a PHP port of highlight.js",
@@ -250,7 +258,7 @@
                 "highlight.php",
                 "syntax"
             ],
-            "time": "2019-01-15T05:54:20+00:00"
+            "time": "2019-08-27T04:27:48+00:00"
         },
         {
             "name": "tinify/tinify",
