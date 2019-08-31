@@ -6,7 +6,9 @@
  * Author URI: https://janboddez.be/
  * License: GNU General Public License v3
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
- * Version: 0.1
+ * Version: 0.2
+ *
+ * @package Source_Snap
  */
 
 namespace Source_Snap;
@@ -17,9 +19,14 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use Highlight\Highlighter;
 
+/**
+ * Main plugin class.
+ */
 class Source_Snap {
 	/**
 	 * Handles plugin settings.
+	 *
+	 * @var Options_Handler $options_handler
 	 */
 	private $options_handler;
 
@@ -30,84 +37,108 @@ class Source_Snap {
 		$this->options_handler = new Options_Handler();
 
 		// Register callback functions.
-		add_action('publish_post', array( $this, 'createThumbnail'), 10, 2);
+		add_action( 'publish_post', array( $this, 'create_thumbnail' ), 10, 2 );
 	}
 
 	/**
 	 * Whenever a post is published through WP Admin, creates a new Featured
-	 * Image based on the `source_snap_snippet` custom field.
+	 * Image based on whatever text (code, presumably) is in the
+	 * `source_snap_snippet` custom field.
 	 *
 	 * Existing images will not be recreated.
 	 *
-	 * @param int $post_id Post ID.
-	 * @param WP_POST $post Corresponding post object.
+	 * @param int     $post_id Post ID.
+	 * @param WP_POST $post    Corresponding post object.
+	 * @return void
 	 */
-	public function createThumbnail( $post_id, $post ) {
+	public function create_thumbnail( $post_id, $post ) {
+		// We currently have a hard requirement for Imagick.
 		if ( ! class_exists( 'Imagick' ) ) {
+			// Imagick not supported. Bail.
 			return;
 		}
 
 		// Get the 'current', i.e., this month's, WordPress upload dir.
 		$wp_upload_dir = wp_upload_dir();
 
-		// File path, without extension.
+		// File path, without extension. The actual filename is equal to the
+		// post slug and thus unique.
 		$filename = trailingslashit( $wp_upload_dir['path'] ) . $post->post_name;
 
-		if ( is_file( $filename . '-min.png' ) ) {
-			// File exists. Bail.
+		if ( is_file( $filename . '-min.png' ) || is_file( $filename . '.png' ) ) {
+			// File already exists. Nothing to do.
 			return;
 		}
 
-		$hl = new Highlighter();
-		$hl->setAutodetectLanguages( array( 'php', 'javascript', 'css', 'bash', 'html', 'apache' ) );
-
-		// Fetch the code snippet to be used.
-		$str = get_post_meta( $post_id, 'source_snap_snippet', true );
+		// Fetch the code snippet and language, if present, to be used.
+		$str  = get_post_meta( $post_id, 'source_snap_snippet', true );
+		$lang = get_post_meta( $post_id, 'source_snap_lang', true );
 
 		if ( empty( $str ) ) {
+			// Nothing to do.
 			return;
 		}
 
-		// Handle possibly encoded strings.
+		// Handle possibly pre-encoded strings.
 		$str = html_entity_decode( $str, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
 		try {
-			// Highlight that code.
-			$highlighted = $hl->highlightAuto( $str );
+			$hl = new Highlighter();
+
+			// Highlight that code. This'll add `span` tags that can be styled
+			// with CSS, and encode HTML entities.
+			if ( in_array( $lang, array( 'php', 'javascript', 'css', 'bash', 'html', 'apache', 'yaml', 'nginx' ), true ) ) {
+				// A supported language was explicitly specified.
+				$highlighted = $hl->highlight( $lang, $str );
+			} else {
+				// Give autodetect a try.
+				$hl->setAutodetectLanguages( array( 'php', 'javascript', 'css', 'bash', 'html', 'apache', 'yaml', 'nginx' ) );
+				$highlighted = $hl->highlightAuto( $str );
+			}
+
+			// Wrap the highlighted code in `pre` tags.
 			$str = '<pre class="hljs ' . $highlighted->language . '">' . $highlighted->value . '</pre>';
-		} catch ( \DomainException $e ) {
-			// Something went wrong.
+		} catch ( \Exception $e ) {
+			// Something went wrong. Bail.
+			error_log( $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			return;
 		}
 
 		// Windows and (older) Mac to Linux newline conversion.
 		$str = str_replace( "\r\n", "\n", $str );
 		$str = str_replace( "\r", "\n", $str );
-		// Add a space to empty lines in order to have them occupy the same
-		// height (!) as non-empty lines.
+
+		// Adding a non-breaking space to empty lines forces Dompdf to have them
+		// occupy the same height (!) as non-empty lines.
 		$str = str_replace( "\n\n", '<br>&nbsp;<br>', $str );
-		// Force line breaks in order to prevent, well, random behavior.
+
+		// Force line breaks in order to prevent, well, more random Dompdf
+		// behavior.
 		$str = str_replace( "\n", '<br>', $str );
 
 		// Start output buffering.
 		ob_start();
-		// Render our 'template'.
+
+		// Render our 'template' (a very simple HTML page with some very simple
+		// inline CSS).
 		require dirname( __FILE__ ) . '/templates/snap.php';
+
+		// Fetch the outcome.
 		$html = ob_get_clean();
 
 		// Convert to PDF at 72 PPI.
 		$options = new Options();
 		$options->setDpi( 72 );
 
-		// This solves an issue with whitespace at the start of a line.
+		// This works around an issue with whitespace at the start of a line.
 		$options->set( 'enable_html5_parser', true );
 		$dompdf = new Dompdf( $options );
 
-		// Set the 'viewport' really wide to prevent random line breaks.
+		// Set the 'viewport' really, really wide to prevent random line breaks.
 		$dompdf->setPaper( array( 0, 0, 999, 3999 ), 'landscape' ); // Pixels, thanks to the 72 PPI above.
 		$dompdf->loadHtml( $html );
 
-		// Render HTML as PDF
+		// Render HTML as PDF.
 		$dompdf->render();
 
 		// Dump to intermediate PDF file.
@@ -126,16 +157,15 @@ class Source_Snap {
 		$width  = $im->getImageWidth();
 		$height = $im->getImageHeight();
 
-		// Resize down and sharpen a bit. (Why the minus 1 pixel? A: Somewhat
-		// crispier text.)
-		$im->resizeImage( $width / 2 - 1, $height / 2 - 1, \Imagick::FILTER_CATROM, 0.69 );
+		// Resize down and sharpen a bit.
+		$im->resizeImage( $width / 2 - 1, $height / 2 - 1, \Imagick::FILTER_CATROM, 0.69 ); // The 'minus 1 pixel' results in somewhat crispier text.
 
 		// Trim away the transparent border. The resulting image is purely text
 		// on a transparent background.
 		$im->trimImage( 0.3 );
 		$im->setImagePage( 0, 0, 0, 0 );
 
-		// Get updated height, plus some bottom padding.
+		// Get updated height, and add some bottom padding.
 		$height = $im->getImageHeight() + 5;
 
 		if ( $height > 560 ) {
@@ -146,14 +176,16 @@ class Source_Snap {
 			$height = 160;
 		}
 
-		// Round up to a multiple of 80. (`$width` is _always_ equal to 1600).
+		// Round up to a multiple of 80. As `$width` is _always_ equal to 1600,
+		// this limits the number of possible aspect ratios, which sometimes
+		// comes in handy when lazy loading is applied.
 		$height = $this->round_up_to_any( $height, 80 );
 
-		// Load our mockup image and place the rendered text on top.
+		// Load our mockup image.
 		$background = new \Imagick();
 		$background->readImage( dirname( __FILE__ ) . '/assets/images/background.png' );
 
-		//$background->compositeImage( $im, \Imagick::COMPOSITE_DEFAULT, 82, 149 );
+		// Place the rendered text on top.
 		$background->compositeImage( $im, \Imagick::COMPOSITE_DEFAULT, 82, 159 );
 		$im->clear();
 		$im->destroy();
@@ -175,7 +207,7 @@ class Source_Snap {
 		$right->destroy();
 
 		$bottom = new \Imagick();
-		$bottom->readImage( dirname( __FILE__ ) . '/assets/images/bottom.png');
+		$bottom->readImage( dirname( __FILE__ ) . '/assets/images/bottom.png' );
 
 		// Lay the bottom image on top of what we've got so far.
 		$background->compositeImage( $bottom, \Imagick::COMPOSITE_DEFAULT, 0, $height + 140 ); // 240, or 3 x 80, minus 100.
@@ -191,31 +223,35 @@ class Source_Snap {
 		if ( ! empty( $options['tinify_enabled'] ) && ! empty( $options['tinify_api_key'] ) ) {
 			// Get the image buffer.
 			ob_start();
-			echo $background;
-			$imageBuffer = ob_get_clean();
+			echo $background; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$image_buffer = ob_get_clean();
 
 			try {
 				// Send the image data off to TinyPNG.
 				\Tinify\setKey( $options['tinify_api_key'] );
-				$resultData = \Tinify\fromBuffer( $imageBuffer )->toBuffer();
+				$result_data = \Tinify\fromBuffer( $image_buffer )->toBuffer();
 				// Save the compressed image to disk.
-				file_put_contents( $filename . '-min.png', $resultData );
+				file_put_contents( $filename . '-min.png', $result_data );
 			} catch ( \Exception $e ) {
 				// Something went wrong.
-				error_log( $e->getMessage() );
+				error_log( $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+
+				// Save the 'original' image to disk instead.
+				$background->writeImage( $filename . '.png' );
 			}
 		} else {
 			// Save the 'original' image to disk.
 			$background->writeImage( $filename . '.png' );
 		}
 
-		// Destroy image buffer.
+		// Destroy the image buffer.
 		$background->clear();
 		$background->destroy();
 
-		// Delete intermediary PDF file.
+		// Delete the intermediary PDF file.
 		unlink( $filename . '.pdf' );
 
+		// Tack the file extension onto the filename (file path, really).
 		if ( is_file( $filename . '-min.png' ) ) {
 			// Tinified image.
 			$filename = $filename . '-min.png';
@@ -249,19 +285,21 @@ class Source_Snap {
 
 		// Set as Featured Iamge.
 		set_post_thumbnail( $post_id, $attachment_id );
+
+		// Done!
 	}
 
 	/**
-	 * Rounds any number up to multiples of a second number.
+	 * Round up to the nearest multiple of a certain number.
 	 *
 	 * @link https://stackoverflow.com/questions/4133859/round-up-to-nearest-multiple-of-five-in-php
 	 *
-	 * @param  int $n Number to be rounded (up).
-	 * @param  int $x 'Base number' to be used.
-	 * @return int    Resulting rounded number.
+	 * @param  int $n Number to be rounded up.
+	 * @param  int $x Round up to multiples of this number only.
+	 * @return int    The outcome.
 	 */
 	private function round_up_to_any( $n, $x = 5 ) {
-		return ( 0 === ceil( $n ) % $x  ? ceil( $n ) : round( ( $n + $x/2 )/$x ) * $x );
+		return ( 0 === ceil( $n ) % $x ? ceil( $n ) : round( ( $n + $x / 2 ) / $x ) * $x );
 	}
 }
 
