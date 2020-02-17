@@ -17,6 +17,10 @@ class ComposerStaticInit99810b6ce0279a5442f47689f05402f9
         array (
             'Tinify\\' => 7,
         ),
+        'S' => 
+        array (
+            'Svg\\' => 4,
+        ),
         'F' => 
         array (
             'FontLib\\' => 8,
@@ -32,6 +36,10 @@ class ComposerStaticInit99810b6ce0279a5442f47689f05402f9
         array (
             0 => __DIR__ . '/..' . '/tinify/tinify/lib/Tinify',
         ),
+        'Svg\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phenx/php-svg-lib/src/Svg',
+        ),
         'FontLib\\' => 
         array (
             0 => __DIR__ . '/..' . '/phenx/php-font-lib/src/FontLib',
@@ -45,10 +53,6 @@ class ComposerStaticInit99810b6ce0279a5442f47689f05402f9
     public static $prefixesPsr0 = array (
         'S' => 
         array (
-            'Svg\\' => 
-            array (
-                0 => __DIR__ . '/..' . '/phenx/php-svg-lib/src',
-            ),
             'Sabberworm\\CSS' => 
             array (
                 0 => __DIR__ . '/..' . '/sabberworm/php-css-parser/lib',
@@ -68,7 +72,7 @@ class ComposerStaticInit99810b6ce0279a5442f47689f05402f9
     );
 
     public static $classMap = array (
-        'Cpdf' => __DIR__ . '/..' . '/dompdf/dompdf/lib/Cpdf.php',
+        'Dompdf\\Cpdf' => __DIR__ . '/..' . '/dompdf/dompdf/lib/Cpdf.php',
         'HTML5_Data' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/Data.php',
         'HTML5_InputStream' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/InputStream.php',
         'HTML5_Parser' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/Parser.php',
