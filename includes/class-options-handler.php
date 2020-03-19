@@ -87,7 +87,7 @@ class Options_Handler {
 			<h1><?php esc_html_e( 'Source Snap', 'source-snap' ); ?></h1>
 			<form method="post" action="options.php">
 				<?php
-				$options = get_option( 'source_snap_settings', $this->default_options );
+				$options = get_option( 'source_snap_settings', self::DEFAULT_OPTIONS );
 
 				// Print nonces and such.
 				settings_fields( 'source-snap-settings-group' );
@@ -119,6 +119,6 @@ class Options_Handler {
 	 * @return array Default options.
 	 */
 	public function get_default_options() {
-		return $this->default_options;
+		return self::DEFAULT_OPTIONS;
 	}
 }

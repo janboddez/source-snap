@@ -223,9 +223,17 @@ class Source_Snap {
 		// Render HTML as PDF.
 		$dompdf->render();
 
+		global $wp_filesystem;
+
+		if ( null === $wp_filesystem ) {
+			require_once ABSPATH . '/wp-admin/includes/file.php';
+
+			WP_Filesystem();
+		}
+
 		// Dump to intermediate PDF file.
 		$output = $dompdf->output();
-		file_put_contents( $filename . '.pdf', $output );
+		$wp_filesystem->put_contents( $filename . '.pdf', $output );
 
 		$im = new \Imagick();
 
@@ -313,7 +321,7 @@ class Source_Snap {
 				\Tinify\setKey( $options['tinify_api_key'] );
 				$result_data = \Tinify\fromBuffer( $image_buffer )->toBuffer();
 				// Save the compressed image to disk.
-				file_put_contents( $filename . '-min.png', $result_data );
+				$wp_filesystem->put_contents( $filename . '-min.png', $result_data );
 			} catch ( \Exception $e ) {
 				// Something went wrong.
 				error_log( $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
