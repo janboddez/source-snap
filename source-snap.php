@@ -2,11 +2,11 @@
 /**
  * Plugin Name: Source Snap
  * Description: Automatically generate Featured Images from source code snippets.
- * Author: Jan Boddez
- * Author URI: https://janboddez.be/
+ * Author:      Jan Boddez
+ * Author URI:  https://janboddez.tech/
  * License: GNU General Public License v3
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
- * Version: 0.2
+ * Version:     0.2
  *
  * @package Source_Snap
  */
@@ -18,7 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require __DIR__ . '/vendor/autoload.php';
+if ( is_readable( __DIR__ . '/vendor/autoload.php' ) ) {
+	require __DIR__ . '/vendor/autoload.php';
+}
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -40,17 +42,19 @@ class Source_Snap {
 	 */
 	public function __construct() {
 		$this->options_handler = new Options_Handler();
+	}
 
-		// Register callback functions.
+	/**
+	 * Registers callback functions.
+	 */
+	public function register() {
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
-		add_action( 'save_post', array( $this, 'update_meta' ), 10, 2 );
-		add_action( 'publish_post', array( $this, 'create_thumbnail' ), 99, 2 );
+		add_action( 'save_post', array( $this, 'update_meta' ), 11, 2 );
+		add_action( 'publish_post', array( $this, 'create_thumbnail' ), 999, 2 );
 	}
 
 	/**
 	 * Registers a new meta box.
-	 *
-	 * @since 0.1.0
 	 */
 	public function add_meta_box() {
 		add_meta_box(
@@ -66,7 +70,6 @@ class Source_Snap {
 	/**
 	 * Renders custom fields meta boxes on the custom post type edit page.
 	 *
-	 * @since 0.1.0
 	 * @param WP_Post $post Post being edited.
 	 */
 	public function render_meta_box( $post ) {
@@ -88,7 +91,6 @@ class Source_Snap {
 	/**
 	 * Handles metadata.
 	 *
-	 * @since 0.1.0
 	 * @param int     $post_id Post ID.
 	 * @param WP_Post $post    Corresponding post object.
 	 */
@@ -374,13 +376,15 @@ class Source_Snap {
 	 *
 	 * @link https://stackoverflow.com/questions/4133859/round-up-to-nearest-multiple-of-five-in-php
 	 *
-	 * @param  int $n Number to be rounded up.
-	 * @param  int $x Round up to multiples of this number only.
-	 * @return int    The outcome.
+	 * @param int $n Number to be rounded up.
+	 * @param int $x Round up to multiples of this number only.
+	 *
+	 * @return int The outcome.
 	 */
 	private function round_up_to_any( $n, $x = 5 ) {
 		return ( 0 === ceil( $n ) % $x ? ceil( $n ) : round( ( $n + $x / 2 ) / $x ) * $x );
 	}
 }
 
-new Source_Snap();
+$source_snap = new Source_Snap();
+$source_snap->register();

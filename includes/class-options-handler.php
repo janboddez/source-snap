@@ -1,12 +1,22 @@
 <?php
+/**
+ * Deals with all things options.
+ *
+ * @package Source_Snap
+ */
 
 namespace Source_Snap;
 
+/**
+ * Deals with all things options.
+ */
 class Options_Handler {
 	/**
 	 * Default options array.
+	 *
+	 * @var array $options Default options array.
 	 */
-	private $default_options = array(
+	const DEFAULT_OPTIONS = array(
 		'tinify_enabled' => false,
 		'tinify_api_key' => '',
 	);
@@ -52,8 +62,8 @@ class Options_Handler {
 	public function sanitize_settings( $settings ) {
 		$options = get_option( 'source_snap_settings', array() );
 
-		foreach ( $this->default_options as $key => $value ) {
-			if ( $key === 'tinify_enabled' ) {
+		foreach ( self::DEFAULT_OPTIONS as $key => $value ) {
+			if ( 'tinify_enabled' === $key ) {
 				if ( isset( $settings[ $key ] ) && '1' === $settings[ $key ] ) {
 					$options[ $key ] = true;
 				} else {
@@ -74,7 +84,7 @@ class Options_Handler {
 	public function settings_page() {
 		?>
 		<div class="wrap">
-			<h1><?php _e( 'Source Snap', 'source-snap' ); ?></h1>
+			<h1><?php esc_html_e( 'Source Snap', 'source-snap' ); ?></h1>
 			<form method="post" action="options.php">
 				<?php
 				$options = get_option( 'source_snap_settings', $this->default_options );
@@ -84,14 +94,15 @@ class Options_Handler {
 				?>
 				<table class="form-table">
 					<tr valign="top">
-						<th scope="row"><?php _e( 'Enable Tinify?', 'source-snap' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Enable Tinify?', 'source-snap' ); ?></th>
 						<td>
-							<label><input type="checkbox" name="source_snap_settings[tinify_enabled]" value="1" <?php checked( $options['tinify_enabled'] ); ?> /> <?php _e( 'Crush code snaps using TinyPNG&rsquo;s API.', 'source-snap' ); ?></label>
-							<p class="description"><?php printf( __( 'May slow down publishing, but usually results in much smaller file sizes. Requires you sign up for a free <a href="%s" target="_blank" rel="noopener">API account</a>.', 'source-snap' ), 'https://tinypng.com/developers' ); ?></p>
+							<label><input type="checkbox" name="source_snap_settings[tinify_enabled]" value="1" <?php checked( $options['tinify_enabled'] ); ?> /> <?php esc_html_e( 'Crush code snaps using TinyPNG&rsquo;s API.', 'source-snap' ); ?></label>
+							<?php /* translators: %s: URL of the TinyPNG developers site */ ?>
+							<p class="description"><?php printf( esc_html__( 'May slow down publishing, but usually results in much smaller file sizes. Requires you sign up for a free <a href="%s" target="_blank" rel="noopener">API account</a>.', 'source-snap' ), 'https://tinypng.com/developers' ); ?></p>
 						</td>
 					</tr>
 					<tr valign="top">
-						<th scope="row"><label for="source_snap_settings[tinify_api_key]"><?php _e( 'TinyPNG API Key', 'source-snap' ); ?></label></th>
+						<th scope="row"><label for="source_snap_settings[tinify_api_key]"><?php esc_html_e( 'TinyPNG API Key', 'source-snap' ); ?></label></th>
 						<td><input type="text" id="source_snap_settings[tinify_api_key]" name="source_snap_settings[tinify_api_key]" style="min-width: 50%;" value="<?php echo esc_attr( $options['tinify_api_key'] ); ?>" /></td>
 					</tr>
 				</table>
