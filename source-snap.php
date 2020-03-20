@@ -6,7 +6,7 @@
  * Author URI:  https://janboddez.tech/
  * License: GNU General Public License v3
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
- * Version:     0.2
+ * Version:     0.3
  *
  * @package Source_Snap
  */
