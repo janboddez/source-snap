@@ -77,11 +77,11 @@ class Source_Snap {
 			<?php wp_nonce_field( basename( __FILE__ ), 'source_snap_nonce' ); ?>
 			<table style="width: 100%;">
 				<tr valign="top">
-					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_lang" style="margin-right: 1em;"><?php esc_html_e( 'Language', 'source-snap' ); ?></label></th>
+					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_lang" style="display:block; margin-right: 1em;"><?php esc_html_e( 'Language', 'source-snap' ); ?></label></th>
 					<td><input type="text" name="source_snap_lang" id="source_snap_lang" value="<?php echo esc_attr( get_post_meta( $post->ID, '_source_snap_lang', true ) ); ?>" class="widefat" /></td>
 				</tr>
 				<tr valign="top">
-					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_code" style="margin-right: 1em;"><?php esc_html_e( 'Code Snippet', 'source-snap' ); ?></label></th>
+					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_code" style="display:block; margin-right: 1em; display:block;"><?php esc_html_e( 'Code Snippet', 'source-snap' ); ?></label></th>
 					<td><textarea name="source_snap_code" id="source_snap_code" rows="8" class="widefat" style="font: 13px/1.5 Consolas, Monaco, monospace;"><?php echo esc_html( get_post_meta( $post->ID, '_source_snap_code', true ) ); ?></textarea></td>
 				</tr>
 			</table>
