@@ -8,15 +8,9 @@ class ComposerStaticInit99810b6ce0279a5442f47689f05402f9
 {
     public static $files = array (
         'b6ec61354e97f32c0ae683041c78392a' => __DIR__ . '/..' . '/scrivo/highlight.php/HighlightUtilities/functions.php',
-        '74ed299072414d276bb7568fe71d5b0c' => __DIR__ . '/..' . '/tinify/tinify/lib/Tinify.php',
-        '9635627915aaea7a98d6d14d04ca5b56' => __DIR__ . '/..' . '/tinify/tinify/lib/Tinify/Exception.php',
     );
 
     public static $prefixLengthsPsr4 = array (
-        'T' => 
-        array (
-            'Tinify\\' => 7,
-        ),
         'S' => 
         array (
             'Svg\\' => 4,
@@ -32,10 +26,6 @@ class ComposerStaticInit99810b6ce0279a5442f47689f05402f9
     );
 
     public static $prefixDirsPsr4 = array (
-        'Tinify\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/tinify/tinify/lib/Tinify',
-        ),
         'Svg\\' => 
         array (
             0 => __DIR__ . '/..' . '/phenx/php-svg-lib/src/Svg',
@@ -72,13 +62,13 @@ class ComposerStaticInit99810b6ce0279a5442f47689f05402f9
     );
 
     public static $classMap = array (
+        'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'Dompdf\\Cpdf' => __DIR__ . '/..' . '/dompdf/dompdf/lib/Cpdf.php',
         'HTML5_Data' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/Data.php',
         'HTML5_InputStream' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/InputStream.php',
         'HTML5_Parser' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/Parser.php',
         'HTML5_Tokenizer' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/Tokenizer.php',
         'HTML5_TreeBuilder' => __DIR__ . '/..' . '/dompdf/dompdf/lib/html5lib/TreeBuilder.php',
-        'Source_Snap\\Options_Handler' => __DIR__ . '/../..' . '/includes/class-options-handler.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

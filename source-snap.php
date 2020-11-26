@@ -31,26 +31,12 @@ use Highlight\Highlighter;
  */
 class Source_Snap {
 	/**
-	 * Handles plugin settings.
-	 *
-	 * @var Options_Handler $options_handler
-	 */
-	private $options_handler;
-
-	/**
-	 * Constructor.
-	 */
-	public function __construct() {
-		$this->options_handler = new Options_Handler();
-	}
-
-	/**
 	 * Registers callback functions.
 	 */
 	public function register() {
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
-		add_action( 'save_post', array( $this, 'update_meta' ), 11, 2 );
-		add_action( 'publish_post', array( $this, 'create_thumbnail' ), 999, 2 );
+		add_action( 'save_post', array( $this, 'update_meta' ), 9, 2 );
+		add_action( 'publish_post', array( $this, 'create_thumbnail' ), 99, 2 );
 	}
 
 	/**
@@ -77,11 +63,11 @@ class Source_Snap {
 			<?php wp_nonce_field( basename( __FILE__ ), 'source_snap_nonce' ); ?>
 			<table style="width: 100%;">
 				<tr valign="top">
-					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_lang" style="display:block; margin-right: 1em;"><?php esc_html_e( 'Language', 'source-snap' ); ?></label></th>
+					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_lang" style="display: block; margin-right: 1em;"><?php esc_html_e( 'Language', 'source-snap' ); ?></label></th>
 					<td><input type="text" name="source_snap_lang" id="source_snap_lang" value="<?php echo esc_attr( get_post_meta( $post->ID, '_source_snap_lang', true ) ); ?>" class="widefat" /></td>
 				</tr>
 				<tr valign="top">
-					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_code" style="display:block; margin-right: 1em; display:block;"><?php esc_html_e( 'Code Snippet', 'source-snap' ); ?></label></th>
+					<th style="width: 10%; text-align: right; font-weight: normal;"><label for="source_snap_code" style="display: block; margin-right: 1em;"><?php esc_html_e( 'Code Snippet', 'source-snap' ); ?></label></th>
 					<td><textarea name="source_snap_code" id="source_snap_code" rows="8" class="widefat" style="font: 13px/1.5 Consolas, Monaco, monospace;"><?php echo esc_html( get_post_meta( $post->ID, '_source_snap_code', true ) ); ?></textarea></td>
 				</tr>
 			</table>
@@ -113,7 +99,9 @@ class Source_Snap {
 		}
 
 		if ( ! empty( $_POST['source_snap_code'] ) ) {
-			update_post_meta( $post->ID, '_source_snap_code', sanitize_textarea_field( wp_unslash( $_POST['source_snap_code'] ) ) );
+			// We're deliberately not stripping `<` and `>` (nor anything in
+			// between). Entities may but don't have to be encoded.
+			update_post_meta( $post->ID, '_source_snap_code', wp_unslash( $_POST['source_snap_code'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		}
 	}
 
@@ -143,10 +131,10 @@ class Source_Snap {
 		$wp_upload_dir = wp_upload_dir();
 
 		// File path, without extension. The actual filename is equal to the
-		// post slug and thus unique.
+		// post slug and thus (almost always) unique.
 		$filename = trailingslashit( $wp_upload_dir['path'] ) . $post->post_name;
 
-		if ( is_file( $filename . '-min.png' ) || is_file( $filename . '.png' ) ) {
+		if ( is_file( $filename . '.png' ) ) {
 			// File already exists. Leave it to the post author to set it as the
 			// post's Featured Image.
 			return;
@@ -211,6 +199,8 @@ class Source_Snap {
 		// Convert to PDF at 72 PPI.
 		$options = new Options();
 		$options->setDpi( 72 );
+		// Allow access to assets folder.
+		$options->setChroot( dirname( __FILE__ ) . '/assets' );
 
 		// This works around an issue with whitespace at the start of a line.
 		$options->set( 'enable_html5_parser', true );
@@ -227,7 +217,6 @@ class Source_Snap {
 
 		if ( null === $wp_filesystem ) {
 			require_once ABSPATH . '/wp-admin/includes/file.php';
-
 			WP_Filesystem();
 		}
 
@@ -306,33 +295,8 @@ class Source_Snap {
 		$bottom->clear();
 		$bottom->destroy();
 
-		// Fetch plugin options.
-		$options = get_option( 'source_snap_settings', $this->options_handler->get_default_options() );
-
-		// If Tinify is enabled.
-		if ( ! empty( $options['tinify_enabled'] ) && ! empty( $options['tinify_api_key'] ) ) {
-			// Get the image buffer.
-			ob_start();
-			echo $background; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			$image_buffer = ob_get_clean();
-
-			try {
-				// Send the image data off to TinyPNG.
-				\Tinify\setKey( $options['tinify_api_key'] );
-				$result_data = \Tinify\fromBuffer( $image_buffer )->toBuffer();
-				// Save the compressed image to disk.
-				$wp_filesystem->put_contents( $filename . '-min.png', $result_data );
-			} catch ( \Exception $e ) {
-				// Something went wrong.
-				error_log( $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
-
-				// Save the 'original' image to disk instead.
-				$background->writeImage( $filename . '.png' );
-			}
-		} else {
-			// Save the 'original' image to disk.
-			$background->writeImage( $filename . '.png' );
-		}
+		// Save composited image to disk.
+		$background->writeImage( $filename . '.png' );
 
 		// Destroy the image buffer.
 		$background->clear();
@@ -342,13 +306,9 @@ class Source_Snap {
 		unlink( $filename . '.pdf' );
 
 		// Tack the file extension onto the filename (file path, really).
-		if ( is_file( $filename . '-min.png' ) ) {
-			// Tinified image.
-			$filename = $filename . '-min.png';
-		} elseif ( is_file( $filename . '.png' ) ) {
-			// 'Original' image.
-			$filename = $filename . '.png';
-		} else {
+		$filename = $filename . '.png';
+
+		if ( ! is_file( $filename ) ) {
 			// Something went wrong.
 			return;
 		}

@@ -1,12 +1,6 @@
 {
     "require": {
-        "dompdf/dompdf": "^0.8.3",
-        "scrivo/highlight.php": "^9.15",
-        "tinify/tinify": "^1.5"
-    },
-    "autoload": {
-        "classmap": [
-            "includes"
-        ]
+        "dompdf/dompdf": "^0.8.6",
+        "scrivo/highlight.php": "^9.15"
     }
 }
